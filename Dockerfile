@@ -1,12 +1,12 @@
 FROM node:20-alpine
 
-WORKDIR /src
+WORKDIR /app
 
 COPY package*.json ./
 
 RUN npm ci --omit=dev
 
-COPY app.js server.js ./
+COPY src/app.js src/server.js ./
 
 ENV PORT=3000
 
