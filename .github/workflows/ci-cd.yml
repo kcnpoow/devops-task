@@ -1,0 +1,81 @@
+name: Student Grades CI/CD
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  ci-cd:
+    name: Build, Test and Deploy
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Code quality check
+        run: npm run lint
+
+      - name: Run automated tests
+        run: npm test
+
+      - name: Create build artifact
+        run: |
+          zip -r student-grades-api.zip \
+            app.js server.js package.json package-lock.json \
+            -x "node_modules/*"
+
+      - name: Build Docker image
+        run: |
+          docker build -t student-grades-api:${{ github.sha }} .
+
+      - name: Deploy to test environment
+        run: |
+          docker run -d \
+            --name student-grades-test \
+            -p 3000:3000 \
+            student-grades-api:${{ github.sha }}
+
+      - name: Verify deployment
+        run: |
+          for i in $(seq 1 15); do
+            if curl --fail --silent http://localhost:3000/health; then
+              echo ""
+              echo "Deployment verification successful"
+              break
+            fi
+            if [ "$i" -eq 15 ]; then
+              docker logs student-grades-test
+              exit 1
+            fi
+            sleep 2
+          done
+
+          curl --fail --silent http://localhost:3000/api/grades
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: student-grades-api
+          path: student-grades-api.zip
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Stop test container
+        if: always()
+        run: docker rm -f student-grades-test || true
