@@ -6,7 +6,7 @@ describe("GET /api/grades", () => {
     const res = await request(app).get("/api/grades");
     expect(res.statusCode).toBe(200);
     expect(Array.isArray(res.body)).toBeTruthy();
-    expect(res.body.length).toBe(3);
+    expect(res.body.length).toBe(4);
     expect(res.body[0]).toHaveProperty("grade");
   });
 });
