@@ -55,18 +55,20 @@ jobs:
         run: |
           for i in $(seq 1 15); do
             if curl --fail --silent http://localhost:3000/health; then
-              echo ""
-              echo "Deployment verification successful"
+              echo "Health check successful"
               break
             fi
+
             if [ "$i" -eq 15 ]; then
+              echo "Health check failed"
               docker logs student-grades-test
               exit 1
             fi
+
             sleep 2
           done
 
-          curl --fail --silent http://localhost:3000/api/grades
+          curl --fail --show-error http://localhost:3000/api/grades
 
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
